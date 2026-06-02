@@ -150,12 +150,10 @@ python main.py
 | OpenAI 兼容 API | 0.5-1.5s | 网络依赖 |
 | 浮窗渲染 | < 10ms | 低 |
 
-## 🎮 游戏兼容性
-- ✅ **FPS 游戏**: CS2, Valorant, Apex, PUBG
-- ✅ **MOBA**: League of Legends, Dota 2
-- ✅ **合作游戏**: Among Us, Phasmophobia
-- ✅ **MMO**: World of Warcraft, Final Fantasy XIV
-- ⚠️ **DRM 保护**: 某些游戏可能阻止音频捕获
+## 🎮 适用范围
+本工具通过 Windows 系统声音设备采集音频，不针对某一款游戏做专门适配。只要游戏语音能从当前扬声器、耳机、HDMI、USB 声卡或虚拟声卡正常播放，并且系统能暴露对应的 `[系统声音]` / `Loopback` 设备，通常就可以尝试使用。
+
+未逐个实测的游戏不应标记为“已兼容”。如果某些游戏、反作弊、独占音频模式、远程串流、DRM 保护或特殊声卡驱动阻止系统声音被捕获，需要改用其他输出设备、关闭独占模式，或使用 VB-Cable 等虚拟音频设备绕路。
 
 ## 📝 注意事项
 1. 首次运行会下载 Whisper 模型（默认 base 约 150MB；更大模型会占用更多空间）
