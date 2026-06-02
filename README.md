@@ -2,6 +2,8 @@
 
 English documentation: [README_EN.md](README_EN.md)
 
+一个面向 PC 游戏玩家的开源实时语音翻译浮窗工具，适合海外服开黑、公会语音、Discord 队友沟通和直播字幕辅助。
+
 ## 🎮 功能特性
 - **实时音频捕获**: 使用 WASAPI Loopback 捕获系统音频输出（不是麦克风）
 - **本地语音识别**: 基于 faster-whisper 的离线语音转文字，支持自动识别中文/英文
@@ -185,4 +187,6 @@ python main.py
 欢迎提交 Issue 和 Pull Request 改进项目！
 
 ## 📄 许可证
-MIT License
+本社区版项目采用 GNU General Public License v3.0，详见 [LICENSE](LICENSE)。
+
+如需闭源商业使用、私有定制发行或商业版授权，请另行取得授权。

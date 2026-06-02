@@ -2,6 +2,8 @@
 
 Chinese documentation: [README.md](README.md)
 
+An open-source real-time voice translation overlay for PC gamers, designed for overseas servers, guild voice chat, Discord teammates, and live-stream subtitle assistance.
+
 ## Features
 - **System-audio capture**: Captures Windows playback audio through WASAPI Loopback, not the microphone.
 - **Local speech recognition**: Uses faster-whisper for offline speech-to-text and can auto-detect Chinese or English.
@@ -166,4 +168,6 @@ Some games, anti-cheat systems, exclusive audio mode, remote streaming tools, DR
 4. Keep the mobile page open if you use mobile mirroring.
 
 ## License
-MIT License
+This community edition is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE).
+
+Closed-source commercial use, private custom distribution, or commercial edition licensing requires separate authorization.
