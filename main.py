@@ -91,6 +91,7 @@ class GameVoiceTranslator:
         self._hotkey_handles = []
         self._pending_notices = []
         self._last_audio_device = (
+            self.config.audio.input_device_id,
             self.config.audio.input_device_index,
             self.config.audio.input_device_name,
             self.config.audio.max_speech_seconds,
@@ -150,6 +151,7 @@ class GameVoiceTranslator:
         settings_path = self._runtime_dir() / "user_settings.json"
         data = {
             "audio": {
+                "input_device_id": self.config.audio.input_device_id,
                 "input_device_index": self.config.audio.input_device_index,
                 "input_device_name": self.config.audio.input_device_name,
                 "max_speech_seconds": self.config.audio.max_speech_seconds,
@@ -415,10 +417,16 @@ class GameVoiceTranslator:
             self._list_audio_devices(),
             self._apply_overlay_settings,
             self._list_audio_devices,
+            self._request_shutdown,
         )
         self._overlay.show()
         self._flush_pending_notices()
         logger.info("浮窗已启动")
+
+    def _request_shutdown(self):
+        logger.info("收到退出按钮请求")
+        if self._qt_app:
+            self._qt_app.quit()
 
     def _apply_overlay_settings(
         self,
@@ -432,6 +440,7 @@ class GameVoiceTranslator:
         self.config.overlay = overlay_config
         self.config.hotkeys = hotkey_config
         self.config.translation = translation_config
+        self.config.audio.input_device_id = getattr(audio_config, "input_device_id", "")
         self.config.audio.input_device_index = audio_config.input_device_index
         self.config.audio.input_device_name = audio_config.input_device_name
         self.config.audio.max_speech_seconds = audio_config.max_speech_seconds
@@ -441,6 +450,7 @@ class GameVoiceTranslator:
         self._setup_hotkeys()
         self._save_user_settings()
         current_device = (
+            self.config.audio.input_device_id,
             self.config.audio.input_device_index,
             self.config.audio.input_device_name,
             self.config.audio.max_speech_seconds,

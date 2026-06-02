@@ -55,6 +55,7 @@ class HotkeyConfig:
 class AudioDeviceConfig:
     input_device_index: Optional[int] = None
     input_device_name: str = ""
+    input_device_id: str = ""
     max_speech_seconds: float = 8.0
 
 
@@ -206,7 +207,7 @@ def _make_icon(kind: str, color: str) -> QIcon:
         painter.fillRect(QRect(17, 17, 3, 3), QColor(color))
         painter.fillRect(QRect(21, 21, 3, 3), QColor(color))
         painter.fillRect(QRect(17, 23, 7, 2), QColor(color))
-    else:
+    elif kind == "settings":
         painter.drawEllipse(QPoint(14, 14), 4, 4)
         for angle in range(0, 360, 45):
             painter.save()
@@ -215,6 +216,9 @@ def _make_icon(kind: str, color: str) -> QIcon:
             painter.drawLine(0, -11, 0, -8)
             painter.restore()
         painter.drawEllipse(QPoint(14, 14), 10, 10)
+    else:
+        painter.drawLine(8, 8, 20, 20)
+        painter.drawLine(20, 8, 8, 20)
 
     painter.end()
     return QIcon(pixmap)
@@ -353,17 +357,21 @@ class SettingsDialog(QDialog):
         selected_row = 0
         selected_index = self.audio_config.input_device_index
         selected_name = (self.audio_config.input_device_name or "").strip()
+        selected_device_id = (getattr(self.audio_config, "input_device_id", "") or "").strip()
         for row, device in enumerate(self.audio_devices, start=1):
             index = device.get("index")
             name = device.get("name", "")
+            device_id = (device.get("device_id") or "").strip()
             sample_rate = device.get("sample_rate") or 0
             channels = device.get("channels") or 0
             device_type = "系统声音" if device.get("is_loopback") else "输入设备"
             label = f"[{device_type}] [{index}] {name} ({sample_rate}Hz/{channels}ch)"
             self.audio_device_combo.addItem(label, device)
-            if selected_index is not None and int(selected_index) == int(index):
+            if selected_device_id and selected_device_id == device_id:
                 selected_row = row
-            elif selected_index is None and selected_name and selected_name == name:
+            elif selected_row == 0 and selected_name and selected_name == name:
+                selected_row = row
+            elif selected_row == 0 and not selected_name and selected_index is not None and int(selected_index) == int(index):
                 selected_row = row
         self.audio_device_combo.setCurrentIndex(selected_row)
         self.audio_device_combo.blockSignals(False)
@@ -412,9 +420,11 @@ class SettingsDialog(QDialog):
         if device:
             self.audio_config.input_device_index = int(device.get("index"))
             self.audio_config.input_device_name = device.get("name", "")
+            self.audio_config.input_device_id = device.get("device_id", "")
         else:
             self.audio_config.input_device_index = None
             self.audio_config.input_device_name = ""
+            self.audio_config.input_device_id = ""
         self.audio_config.max_speech_seconds = float(self.max_speech_seconds_spin.value())
 
 
@@ -430,6 +440,7 @@ class GameOverlay(QWidget):
         audio_devices: Optional[List[dict]] = None,
         on_settings_changed: Optional[Callable[[OverlayConfig, HotkeyConfig, AudioDeviceConfig, TranslationConfig], None]] = None,
         on_audio_devices_refresh: Optional[Callable[[], List[dict]]] = None,
+        on_shutdown_requested: Optional[Callable[[], None]] = None,
     ):
         super().__init__()
         self.config = config or OverlayConfig()
@@ -439,6 +450,7 @@ class GameOverlay(QWidget):
         self.audio_devices = audio_devices or []
         self._on_settings_changed = on_settings_changed
         self._on_audio_devices_refresh = on_audio_devices_refresh
+        self._on_shutdown_requested = on_shutdown_requested
         self._translations: deque = deque(maxlen=self.config.max_lines)
         self._signals = OverlaySignals()
         self._dragging = False
@@ -521,6 +533,15 @@ class GameOverlay(QWidget):
         self._settings_button.setCursor(Qt.PointingHandCursor)
         self._settings_button.clicked.connect(self._open_settings)
         toolbar_layout.addWidget(self._settings_button)
+
+        self._quit_button = QToolButton()
+        self._quit_button.setObjectName("quitButton")
+        self._quit_button.setIcon(_make_icon("close", self.config.text_color))
+        self._quit_button.setToolTip("退出程序")
+        self._quit_button.setFixedSize(28, 24)
+        self._quit_button.setCursor(Qt.PointingHandCursor)
+        self._quit_button.clicked.connect(self._request_shutdown)
+        toolbar_layout.addWidget(self._quit_button)
         self._layout.addWidget(self._toolbar)
 
         self._qr_popup = QFrame(self)
@@ -576,12 +597,12 @@ class GameOverlay(QWidget):
                 font-size: {max(10, self.config.font_size - 4)}px;
                 padding: 0 2px;
             }}
-            QToolButton#qrButton, QToolButton#settingsButton {{
+            QToolButton#qrButton, QToolButton#settingsButton, QToolButton#quitButton {{
                 background: rgba(18, 24, 33, 150);
                 border: 1px solid {self.config.text_color};
                 border-radius: 4px;
             }}
-            QToolButton#qrButton:hover, QToolButton#settingsButton:hover {{
+            QToolButton#qrButton:hover, QToolButton#settingsButton:hover, QToolButton#quitButton:hover {{
                 background: rgba(40, 60, 48, 210);
             }}
             QFrame#qrPopup {{
@@ -658,6 +679,7 @@ class GameOverlay(QWidget):
         self._apply_styles()
         self._qr_button.setIcon(_make_icon("qr", self.config.text_color))
         self._settings_button.setIcon(_make_icon("settings", self.config.text_color))
+        self._quit_button.setIcon(_make_icon("close", self.config.text_color))
         self._refresh_labels()
         self.update()
         if self._on_settings_changed:
@@ -673,6 +695,14 @@ class GameOverlay(QWidget):
             self.audio_devices = self._on_audio_devices_refresh() or []
         if self._settings_dialog:
             self._settings_dialog.set_audio_devices(self.audio_devices, self.audio_config)
+
+    def _request_shutdown(self):
+        if self._on_shutdown_requested:
+            self._on_shutdown_requested()
+        else:
+            app = QApplication.instance()
+            if app:
+                app.quit()
 
     def _connect_signals(self):
         """连接信号"""

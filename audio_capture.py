@@ -30,7 +30,28 @@ class AudioConfig:
     max_speech_seconds: float = 8.0
     input_device_index: Optional[int] = None
     input_device_name: str = ""
+    input_device_id: str = ""
     format: int = pyaudio.paInt16
+
+
+def _device_name(info) -> str:
+    return str(info.get("name", "") or "").strip()
+
+
+def _normalize_device_name(name: str) -> str:
+    return (name or "").strip().casefold()
+
+
+def _is_loopback_info(info, is_loopback=False) -> bool:
+    return bool(is_loopback or info.get("isLoopbackDevice"))
+
+
+def stable_device_id(info, is_loopback=False) -> str:
+    """Return a stable-ish device identity that does not depend on list position."""
+    device_type = "loopback" if _is_loopback_info(info, is_loopback) else "input"
+    host_api = info.get("hostApi", "")
+    name = _normalize_device_name(_device_name(info))
+    return f"{device_type}:{host_api}:{name}"
 
 
 def list_input_devices():
@@ -50,6 +71,8 @@ def list_input_devices():
         devices.append({
             "index": index,
             "name": info.get("name", ""),
+            "device_id": stable_device_id(info, is_loopback),
+            "host_api": int(info.get("hostApi", -1)),
             "channels": channels,
             "sample_rate": int(float(info.get("defaultSampleRate", 0) or 0)),
             "is_loopback": bool(is_loopback or info.get("isLoopbackDevice")),
@@ -97,6 +120,11 @@ class SystemAudioCapture:
             selected = self._first_usable_device(configured)
             if selected is not None:
                 return selected
+            logger.error("已选择的音频设备不可用，已停止自动切换到其他设备")
+            return None
+        if self._has_configured_device():
+            logger.error("已选择的音频设备未找到，已停止自动切换到其他设备")
+            return None
 
         candidates = self._auto_device_candidates()
         selected = self._first_usable_device(candidates)
@@ -105,6 +133,13 @@ class SystemAudioCapture:
 
         logger.error("未找到可用音频输入设备")
         return None
+
+    def _has_configured_device(self) -> bool:
+        return (
+            getattr(self.config, "input_device_index", None) is not None
+            or bool((getattr(self.config, "input_device_name", "") or "").strip())
+            or bool((getattr(self.config, "input_device_id", "") or "").strip())
+        )
 
     def _default_loopback_candidates(self):
         if not HAS_WASAPI_LOOPBACK:
@@ -145,27 +180,72 @@ class SystemAudioCapture:
     def _configured_device_candidates(self):
         candidates = []
         configured_index = self.config.input_device_index
-        configured_name = (self.config.input_device_name or "").strip().lower()
+        configured_name = _normalize_device_name(self.config.input_device_name)
+        configured_device_id = str(getattr(self.config, "input_device_id", "") or "").strip()
+        entries = self._input_device_entries()
 
+        if configured_device_id:
+            for index, info in entries:
+                if stable_device_id(info) == configured_device_id:
+                    candidates.append((index, info))
+                    break
+
+        if configured_name:
+            for index, info in entries:
+                name = _normalize_device_name(_device_name(info))
+                if configured_name == name and not any(item[0] == index for item in candidates):
+                    candidates.append((index, info))
+
+        # Older settings only stored the numeric PortAudio index. Use it last,
+        # and only when it still points at the same named device, to avoid
+        # silently opening a neighboring device after USB/WASAPI re-enumeration.
         if configured_index is not None:
             try:
                 info = self._audio.get_device_info_by_index(int(configured_index))
-                if int(info.get("maxInputChannels", 0) or 0) > 0:
+                current_name = _normalize_device_name(_device_name(info))
+                name_matches = not configured_name or configured_name == current_name
+                if int(info.get("maxInputChannels", 0) or 0) > 0 and name_matches:
                     candidates.append((int(configured_index), info))
+                elif configured_name and configured_name != current_name:
+                    logger.warning(
+                        "已保存的音频设备索引 [{}] 当前对应 [{}]，不是 [{}]，已忽略该索引",
+                        configured_index,
+                        _device_name(info),
+                        self.config.input_device_name,
+                    )
             except Exception as e:
                 logger.warning("已保存的音频设备索引不可用: {} ({})", configured_index, e)
 
         if configured_name:
-            for index in range(self._audio.get_device_count()):
-                info = self._audio.get_device_info_by_index(index)
-                name = info.get("name", "")
-                if int(info.get("maxInputChannels", 0) or 0) <= 0:
-                    continue
-                if configured_name == name.lower() or configured_name in name.lower():
+            for index, info in entries:
+                name = _normalize_device_name(_device_name(info))
+                if configured_name in name:
                     if not any(item[0] == index for item in candidates):
                         candidates.append((index, info))
 
         return candidates
+
+    def _input_device_entries(self):
+        entries = []
+        seen_indexes = set()
+
+        def append(info):
+            index = int(info.get("index"))
+            if index in seen_indexes:
+                return
+            if int(info.get("maxInputChannels", 0) or 0) <= 0:
+                return
+            seen_indexes.add(index)
+            entries.append((index, info))
+
+        if HAS_WASAPI_LOOPBACK and hasattr(self._audio, "get_loopback_device_info_generator"):
+            for info in self._audio.get_loopback_device_info_generator():
+                append(info)
+
+        for index in range(self._audio.get_device_count()):
+            append(self._audio.get_device_info_by_index(index))
+
+        return entries
 
     def _auto_device_candidates(self):
         devices = []
@@ -232,6 +312,7 @@ class SystemAudioCapture:
                     self.selected_device = {
                         "index": idx,
                         "name": info.get("name", ""),
+                        "device_id": stable_device_id(info),
                         "type": device_type,
                         "sample_rate": sample_rate,
                         "channels": channels,
