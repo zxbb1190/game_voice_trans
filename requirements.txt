@@ -1,0 +1,34 @@
+# 游戏语音实时翻译器
+# 安装: pip install -r requirements.txt
+
+# 音频处理
+sounddevice==0.4.6
+numpy==1.24.3
+pyaudio==0.2.13
+webrtcvad-wheels==2.0.14
+librosa==0.10.1
+
+# 语音识别 (Whisper)
+faster-whisper==1.2.1
+torch==2.1.0
+torchaudio==2.1.0
+
+# 翻译 API
+requests==2.31.0
+aiohttp==3.9.1
+
+# 界面
+PyQt5==5.15.9
+pyqt5-tools==5.15.9.3.3
+qrcode[pil]==7.4.2
+
+# 网络服务
+websockets==12.0
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# 其他
+pywin32==306
+pynput==1.7.6
+keyboard==0.13.5
+loguru==0.7.3

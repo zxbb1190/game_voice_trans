@@ -1,0 +1,62 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments and local tooling
+.venv/
+venv/
+env/
+.venv-win/
+.agents/
+.codex/
+
+# Local environment and config
+.env
+.env.*
+!.env.example
+config.json
+config.local.json
+
+# Test, coverage, and tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local model caches and packaged model copies
+.models/
+.packaged_models/
+
+# PyInstaller and release artifacts
+build/
+dist/
+release/
+*.manifest
+*.spec.log
+
+# Generated archives and binaries
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.exe
+*.dll
+*.pyd
+
+# Logs and temporary runtime output
+*.log
+*.tmp
+*.temp
+
+# Generated QR/test images
+mobile_qr_test.png
+*_qr_test.png
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
