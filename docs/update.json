@@ -8,8 +8,8 @@
     "保留首次启动向导、真实 API/音频测试、调试延迟记录和反馈诊断模板。"
   ],
   "release_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/latest",
-  "download_lite_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/latest/download/VoxGo-v0.2.1-lite.zip",
-  "download_full_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/latest/download/VoxGo-v0.2.1-full.zip",
+  "download_lite_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.2.1/VoxGo-v0.2.1-lite.zip",
+  "download_full_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.2.1/VoxGo-v0.2.1-full.zip",
   "sha256_lite": "cdae948107d453fbfc63b974d8bc06fb4689891ccb49255953f529955c5217a8",
   "sha256_full": "f5ddfc46d62e1d30d861441c98a19411ade19cdc5e88d8fba3b936fb8a245f6a",
   "mandatory": false
