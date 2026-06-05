@@ -9,6 +9,7 @@ soxr==1.1.0
 
 # 语音识别 (Whisper)
 faster-whisper==1.2.1
+onnxruntime==1.23.2
 
 # 翻译 API
 aiohttp==3.9.1
