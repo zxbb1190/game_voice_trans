@@ -7,8 +7,11 @@ from pathlib import Path
 from faster_whisper import WhisperModel
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
 def main():
-    model_dir = Path(__file__).parent / ".models"
+    model_dir = PROJECT_ROOT / ".models"
     print("before whisper load", flush=True)
     model = WhisperModel(
         "tiny",

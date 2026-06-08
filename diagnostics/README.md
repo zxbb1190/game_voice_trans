@@ -7,6 +7,10 @@ Run them from the project root with the same Python environment used by the app:
 
 ```bash
 python diagnostics/check_imports.py
+python diagnostics/list_devices.py
+python diagnostics/check_stereo_mix.py
+python diagnostics/check_whisper.py
+python diagnostics/diagnose_startup.py
 python diagnostics/generate_mobile_qr.py
 python diagnostics/check_openai_compatible_api.py
 python diagnostics/check_bidirectional_translation.py

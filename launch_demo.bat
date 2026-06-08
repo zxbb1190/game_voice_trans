@@ -8,7 +8,7 @@ echo 正在启动演示程序...
 echo 按 Ctrl+C 停止
 echo.
 
-python quick_start.py
+python scripts\quick_start.py
 
 echo.
 echo ============================================

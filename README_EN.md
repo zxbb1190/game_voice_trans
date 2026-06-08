@@ -24,12 +24,19 @@ GitHub: <https://github.com/zxbb1190/VoxGo_game_voice_trans>
 ## Project Layout
 ```text
 VoxGo_game_voice_trans/
-├── main.py               # Main application
-├── audio_capture.py      # Windows system-audio capture
-├── speech_recognition.py # faster-whisper speech recognition
-├── translator.py         # OpenAI-compatible / Google Cloud Translation client
-├── overlay.py            # PyQt5 overlay window
-├── mobile_server.py      # Mobile WebSocket server
+├── main.py               # Backward-compatible launcher
+├── voxgo/                # Application package
+│   ├── app.py            # VoxGoApp lifecycle coordinator
+│   ├── config/           # Config schema, loading, migration, and presets
+│   ├── audio/            # Audio capture, devices, and segmenter entry points
+│   ├── asr/              # Whisper recognition and model-download entry points
+│   ├── translation/      # Translation providers and prompts
+│   ├── runtime/          # Runtime events and work items
+│   ├── ui/               # Overlay, settings, tray, and QR entry points
+│   ├── mobile/           # Mobile server and static assets
+│   └── update/           # Update-checker entry point
+├── translator.py         # Backward-compatible translation entry point
+├── mobile_server.py      # Backward-compatible mobile server entry point
 ├── tests/                # Lightweight automated tests
 ├── diagnostics/          # Manual troubleshooting scripts
 ├── config.example.json   # Configuration template
@@ -237,7 +244,7 @@ Edit `config.json` or use the overlay settings:
 ### Cannot Capture Audio
 - Choose `[System Audio]` / `Loopback`, not a normal microphone.
 - First click "Test Audio" in the wizard or gear settings, play game/Discord/video sound, and check whether the level bar moves.
-- Run `python list_devices.py` and confirm that system-audio devices are visible.
+- Run `python diagnostics/list_devices.py` and confirm that system-audio devices are visible.
 - Make sure the game sound is playing through the same speaker/headphone device you selected.
 - If you use Bluetooth, HDMI, or a USB sound card, choose the matching system-audio/loopback item.
 - Re-run `install.bat` or install `PyAudioWPatch==0.2.12.8`.

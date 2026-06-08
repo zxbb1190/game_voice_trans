@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoxGo Mobile</title>
+    <link rel="stylesheet" href="/mobile/static/styles.css">
+    <script src="/mobile/static/app.js" defer></script>
+</head>
+<body>
+    <main class="container">
+        <header>
+            <h1>VoxGo</h1>
+            <p>实时接收游戏内语音翻译结果</p>
+            <div id="status" class="status disconnected">未连接</div>
+        </header>
+
+        <section class="translation-container" id="translationContainer">
+            <div class="empty-state" id="emptyState">等待翻译结果...</div>
+        </section>
+
+        <div class="controls">
+            <button type="button" id="clearButton">清空记录</button>
+            <button type="button" class="clear-btn" id="reconnectButton">重新连接</button>
+        </div>
+
+        <div class="connection-info">
+            <p>连接状态: <span id="connectionInfo">正在连接...</span></p>
+            <p>最后更新: <span id="lastUpdate">-</span></p>
+        </div>
+    </main>
+</body>
+</html>

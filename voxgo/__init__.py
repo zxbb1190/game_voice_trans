@@ -1,0 +1,2 @@
+"""VoxGo application package."""
+
