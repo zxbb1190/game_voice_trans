@@ -1,16 +1,16 @@
-{
-  "latest": "0.3.0",
-  "channel": "stable",
-  "title": "VoxGo v0.3.0",
-  "notes": [
-    "Improved English realtime recognition latency for game voice.",
-    "Reduced balanced-mode segmentation delay and queue contention for short voice lines.",
-    "Added richer latency diagnostics including model, device, candidate labels, and fast-path status."
-  ],
-  "release_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/tag/v0.3.0",
-  "download_lite_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-lite.zip",
-  "download_full_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-full.zip",
-  "sha256_lite": "bcb9e2adc5c12d60d4a3fd39b6b12c4b0c20be0691538448c11d2fa5c7322093",
-  "sha256_full": "ca00ccfbe3e7138bdabddec75445640bbfb6b86d1eed96dcd6dc56a832280d4a",
-  "mandatory": false
+﻿{
+    "latest":  "0.3.0",
+    "channel":  "stable",
+    "title":  "VoxGo v0.3.0",
+    "notes":  [
+                  "Improved English realtime recognition latency for game voice.",
+                  "Reduced balanced-mode segmentation delay and queue contention for short voice lines.",
+                  "Added richer latency diagnostics including model, device, candidate labels, and fast-path status."
+              ],
+    "release_url":  "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/tag/v0.3.0",
+    "download_lite_url":  "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-lite.zip",
+    "download_full_url":  "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-full.zip",
+    "sha256_lite":  "7e86d6681420977970229241a748ec4643e34b386d0c1b32f78510ead43efb00",
+    "sha256_full":  "e10999a81a081bdb5c9fac2d3b07e8c35c8e72673dc0d52339803f9939f05845",
+    "mandatory":  false
 }
