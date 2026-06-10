@@ -42,6 +42,14 @@ class OverlaySettingsController:
         previous_translation = app._last_translation_settings
         previous_whisper_device = app._last_whisper_device
         previous_whisper_model = app._current_recognizer_model_size()
+        previous_language_flow = app._last_language_flow
+        previous_language_runtime = (
+            previous_language_flow[0],
+            previous_language_flow[1],
+            getattr(app.config.whisper, "language", "auto"),
+            previous_whisper_model,
+            bool(getattr(app.config.whisper, "pure_english_environment", False)),
+        )
         previous_model_download_source = app._last_model_download_source
         previous_update = (
             bool(getattr(app.config.update, "enabled", True)),
@@ -65,7 +73,14 @@ class OverlaySettingsController:
         app.config.whisper.device = normalize_whisper_device(
             getattr(whisper_config, "device", app.config.whisper.device)
         )
-        for key in ("model_size", "fast_model_size", "enable_english_model", "english_model_size", "fast_english_model_size"):
+        for key in (
+            "model_size",
+            "fast_model_size",
+            "pure_english_environment",
+            "enable_english_model",
+            "english_model_size",
+            "fast_english_model_size",
+        ):
             if hasattr(whisper_config, key):
                 setattr(app.config.whisper, key, getattr(whisper_config, key))
         app.config.whisper.model_download_source = normalize_model_download_source(
@@ -135,12 +150,18 @@ class OverlaySettingsController:
             app.config.audio.min_segment_peak_margin_db,
         )
         app._migrate_runtime_defaults(app.config, preserve_existing_audio_tuning=False)
-        previous_language_flow = app._last_language_flow
         current_language_flow = app._sync_language_flow()
         app._sync_whisper_vad_limit()
+        current_whisper_model = app._effective_whisper_model_size()
+        current_language_runtime = (
+            current_language_flow[0],
+            current_language_flow[1],
+            getattr(app.config.whisper, "language", "auto"),
+            current_whisper_model,
+            bool(getattr(app.config.whisper, "pure_english_environment", False)),
+        )
         if app._speech_recognizer:
             app._speech_recognizer.config = app.config.whisper
-            current_whisper_model = app._effective_whisper_model_size()
             if previous_whisper_model and current_whisper_model != previous_whisper_model:
                 app._speech_recognizer.cleanup()
                 logger.info(
@@ -186,7 +207,7 @@ class OverlaySettingsController:
         )
         if app._running and current_device != previous_device:
             app._restart_audio_capture(reuse_noise_gate=current_device[:3] == previous_device[:3])
-        if current_language_flow != previous_language_flow:
+        if current_language_runtime != previous_language_runtime:
             app._handle_language_flow_changed(current_language_flow[0], current_language_flow[1])
             app._notify_user(
                 ui_text(current_ui_language, "语言方向已更新", "Language Direction Updated"),

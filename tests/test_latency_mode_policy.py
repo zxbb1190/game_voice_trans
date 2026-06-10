@@ -66,7 +66,7 @@ class LatencyModePolicyTest(unittest.TestCase):
                 policy = RecognitionModePolicy.from_audio_config(AudioConfig(latency_mode=mode))
                 self.assertAlmostEqual(policy.pending_timeout_seconds, expected)
 
-    def test_english_direction_shortens_pending_wait_without_changing_acceptance(self):
+    def test_english_direction_keeps_default_wait_without_pure_english_mode(self):
         from voxgo.asr.pipeline import SpeechPipeline
         from voxgo.asr.whisper_engine import WhisperConfig
         from voxgo.config.schema import DebugConfig
@@ -74,7 +74,38 @@ class LatencyModePolicyTest(unittest.TestCase):
 
         config = AppConfig(
             audio=AudioConfig(latency_mode=LATENCY_MODE_FAST),
-            whisper=WhisperConfig(language="en"),
+            whisper=WhisperConfig(language="auto"),
+            translation=TranslationConfig(source_lang="en", target_lang="zh"),
+            debug=DebugConfig(),
+        )
+        pipeline = SpeechPipeline(
+            lambda: config,
+            lambda: None,
+            EventBus(),
+            {"speech_detected": 0, "filtered_speech": 0, "dropped_speech": 0, "errors": 0},
+            lambda: True,
+            lambda: False,
+            lambda: "translation-1",
+            {},
+            lambda *args: None,
+        )
+
+        mode_policy = pipeline._mode_policy(config)
+        decision = CandidatePolicy().classify(_low_margin_short_segment(), config.audio)
+
+        self.assertAlmostEqual(mode_policy.pending_timeout_seconds, 0.30)
+        self.assertTrue(decision.accepted)
+        self.assertTrue(decision.short_segment)
+
+    def test_pure_english_environment_shortens_pending_wait_without_changing_acceptance(self):
+        from voxgo.asr.pipeline import SpeechPipeline
+        from voxgo.asr.whisper_engine import WhisperConfig
+        from voxgo.config.schema import DebugConfig
+        from voxgo.runtime.events import EventBus
+
+        config = AppConfig(
+            audio=AudioConfig(latency_mode=LATENCY_MODE_FAST),
+            whisper=WhisperConfig(language="en", pure_english_environment=True),
             translation=TranslationConfig(source_lang="en", target_lang="zh"),
             debug=DebugConfig(),
         )

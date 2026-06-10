@@ -28,7 +28,8 @@
   "whisper": {
     "model_size": "small",
     "fast_model_size": "",
-    "enable_english_model": true,
+    "pure_english_environment": false,
+    "enable_english_model": false,
     "english_model_size": "small.en",
     "fast_english_model_size": "base.en",
     "device": "cpu",
@@ -37,7 +38,7 @@
     "num_workers": 1,
     "model_download_source": "modelscope",
     "model_download_endpoint": "",
-    "language": "en",
+    "language": "auto",
     "beam_size": 1,
     "vad_filter": false,
     "prompt_profile": "none",

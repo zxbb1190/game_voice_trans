@@ -97,8 +97,12 @@ def load_config(config_path: str = None, runtime_dir: Path = None) -> AppConfig:
     return config
 
 
+def _use_pure_english_model(config: AppConfig, is_english_to_chinese: bool) -> bool:
+    return bool(is_english_to_chinese and getattr(config.whisper, "pure_english_environment", False))
+
+
 def _active_whisper_model_size(config: AppConfig, latency_mode: str, is_english_to_chinese: bool) -> str:
-    if is_english_to_chinese and bool(getattr(config.whisper, "enable_english_model", True)):
+    if _use_pure_english_model(config, is_english_to_chinese):
         if latency_mode == LATENCY_MODE_FAST:
             fast_english = str(getattr(config.whisper, "fast_english_model_size", "") or "").strip()
             if fast_english:
@@ -115,7 +119,7 @@ def apply_language_runtime_policy(config: AppConfig):
     """Apply language-direction runtime choices after source/target are normalized."""
     latency_mode = normalize_latency_mode(getattr(config.audio, "latency_mode", LATENCY_MODE_BALANCED))
     is_english_to_chinese = config.translation.source_lang == "en" and config.translation.target_lang == "zh"
-    if is_english_to_chinese:
+    if _use_pure_english_model(config, is_english_to_chinese):
         apply_english_audio_latency_bias(config.audio, latency_mode)
     config.whisper.active_model_size = _active_whisper_model_size(config, latency_mode, is_english_to_chinese)
 
@@ -227,8 +231,10 @@ def migrate_runtime_defaults(config: AppConfig, preserve_existing_audio_tuning: 
         config.whisper.num_workers = 1
     if not hasattr(config.whisper, "fast_model_size"):
         config.whisper.fast_model_size = ""
+    if not hasattr(config.whisper, "pure_english_environment"):
+        config.whisper.pure_english_environment = False
     if not hasattr(config.whisper, "enable_english_model"):
-        config.whisper.enable_english_model = True
+        config.whisper.enable_english_model = False
     if not hasattr(config.whisper, "english_model_size"):
         config.whisper.english_model_size = "small.en"
     if not hasattr(config.whisper, "fast_english_model_size"):
@@ -237,7 +243,8 @@ def migrate_runtime_defaults(config: AppConfig, preserve_existing_audio_tuning: 
         config.whisper.active_model_size = ""
     config.whisper.model_size = str(getattr(config.whisper, "model_size", "small") or "small").strip() or "small"
     config.whisper.fast_model_size = str(getattr(config.whisper, "fast_model_size", "") or "").strip()
-    config.whisper.enable_english_model = bool(getattr(config.whisper, "enable_english_model", True))
+    config.whisper.pure_english_environment = bool(getattr(config.whisper, "pure_english_environment", False))
+    config.whisper.enable_english_model = config.whisper.pure_english_environment
     config.whisper.english_model_size = (
         str(getattr(config.whisper, "english_model_size", "small.en") or "").strip() or "small.en"
     )
@@ -255,7 +262,7 @@ def migrate_runtime_defaults(config: AppConfig, preserve_existing_audio_tuning: 
         str(getattr(config.translation, "source_lang", "") or "").strip().lower() == "en"
         and str(getattr(config.translation, "target_lang", "") or "").strip().lower() == "zh"
     )
-    if is_english_to_chinese:
+    if _use_pure_english_model(config, is_english_to_chinese):
         apply_english_audio_latency_bias(config.audio, latency_mode)
     config.whisper.active_model_size = _active_whisper_model_size(config, latency_mode, is_english_to_chinese)
     try:
@@ -420,7 +427,8 @@ def serialize_user_settings(config: AppConfig) -> dict:
         "whisper": {
             "model_size": str(getattr(config.whisper, "model_size", "small") or "small").strip() or "small",
             "fast_model_size": str(getattr(config.whisper, "fast_model_size", "") or "").strip(),
-            "enable_english_model": bool(getattr(config.whisper, "enable_english_model", True)),
+            "pure_english_environment": bool(getattr(config.whisper, "pure_english_environment", False)),
+            "enable_english_model": bool(getattr(config.whisper, "pure_english_environment", False)),
             "english_model_size": str(getattr(config.whisper, "english_model_size", "small.en") or "small.en").strip(),
             "fast_english_model_size": str(getattr(config.whisper, "fast_english_model_size", "") or "").strip(),
             "device": normalize_whisper_device(config.whisper.device),
@@ -489,7 +497,11 @@ def sync_language_flow(config: AppConfig):
         target = OPPOSITE_LANGUAGE[source]
     config.translation.source_lang = source
     config.translation.target_lang = target
-    config.whisper.language = source
+    config.whisper.language = (
+        "en"
+        if source == "en" and target == "zh" and bool(getattr(config.whisper, "pure_english_environment", False))
+        else "auto"
+    )
     return source, target
 
 

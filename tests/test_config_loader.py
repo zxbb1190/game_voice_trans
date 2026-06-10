@@ -60,7 +60,7 @@ class ConfigLoaderTest(unittest.TestCase):
             self.assertEqual(config.audio.latency_mode, LATENCY_MODE_FAST)
             self.assertEqual(config.translation.source_lang, "zh")
             self.assertEqual(config.translation.target_lang, "en")
-            self.assertEqual(config.whisper.language, "zh")
+            self.assertEqual(config.whisper.language, "auto")
             self.assertEqual(config.translation.timeout_seconds, 12)
             self.assertEqual(config.translation.max_concurrent_requests, 4)
             self.assertEqual(config.whisper.model_download_source, MODEL_DOWNLOAD_SOURCE_CUSTOM_HF_ENDPOINT)
@@ -72,6 +72,7 @@ class ConfigLoaderTest(unittest.TestCase):
             config.app.setup_completed = True
             config.whisper.device = "gpu"
             config.whisper.fast_model_size = "base"
+            config.whisper.pure_english_environment = True
             config.translation.provider = "openai"
             config.update.ignored_version = "v0.3.0"
 
@@ -82,6 +83,8 @@ class ConfigLoaderTest(unittest.TestCase):
             self.assertEqual(data["whisper"]["device"], "cuda")
             self.assertEqual(data["whisper"]["model_size"], "small")
             self.assertEqual(data["whisper"]["fast_model_size"], "base")
+            self.assertTrue(data["whisper"]["pure_english_environment"])
+            self.assertTrue(data["whisper"]["enable_english_model"])
             self.assertEqual(data["translation"]["provider"], "openai_compatible")
             self.assertEqual(data["update"]["ignored_version"], "0.3.0")
 
@@ -105,11 +108,12 @@ class ConfigLoaderTest(unittest.TestCase):
         self.assertEqual(balanced.whisper.model_size, "small")
         self.assertEqual(balanced.whisper.active_model_size, "")
 
-    def test_english_to_chinese_uses_english_specialized_model(self):
+    def test_english_to_chinese_defaults_to_multilingual_language_detection(self):
         config = default_app_config()
         config.audio.latency_mode = LATENCY_MODE_BALANCED
         config.translation.source_lang = "en"
         config.translation.target_lang = "zh"
+        config.whisper.enable_english_model = True
 
         source, target = sync_language_flow(config)
         migrate_runtime_defaults(config, preserve_existing_audio_tuning=False)
@@ -117,6 +121,26 @@ class ConfigLoaderTest(unittest.TestCase):
         apply_language_runtime_policy(config)
 
         self.assertEqual((source, target), ("en", "zh"))
+        self.assertEqual(config.whisper.language, "auto")
+        self.assertFalse(config.whisper.pure_english_environment)
+        self.assertFalse(config.whisper.enable_english_model)
+        self.assertEqual(config.whisper.active_model_size, "")
+        self.assertEqual(config.audio.speech_idle_timeout_ms, 550)
+
+    def test_pure_english_environment_uses_english_specialized_model(self):
+        config = default_app_config()
+        config.audio.latency_mode = LATENCY_MODE_BALANCED
+        config.translation.source_lang = "en"
+        config.translation.target_lang = "zh"
+        config.whisper.pure_english_environment = True
+
+        source, target = sync_language_flow(config)
+        migrate_runtime_defaults(config, preserve_existing_audio_tuning=False)
+        source, target = sync_language_flow(config)
+        apply_language_runtime_policy(config)
+
+        self.assertEqual((source, target), ("en", "zh"))
+        self.assertEqual(config.whisper.language, "en")
         self.assertEqual(config.whisper.active_model_size, "small.en")
         self.assertEqual(config.audio.speech_idle_timeout_ms, 450)
 
@@ -125,6 +149,7 @@ class ConfigLoaderTest(unittest.TestCase):
         config.audio.latency_mode = LATENCY_MODE_FAST
         config.translation.source_lang = "en"
         config.translation.target_lang = "zh"
+        config.whisper.pure_english_environment = True
         config.whisper.fast_english_model_size = "base.en"
 
         migrate_runtime_defaults(config, preserve_existing_audio_tuning=False)
@@ -145,7 +170,7 @@ class ConfigLoaderTest(unittest.TestCase):
         sync_language_flow(config)
         apply_language_runtime_policy(config)
 
-        self.assertEqual(config.whisper.language, "zh")
+        self.assertEqual(config.whisper.language, "auto")
         self.assertEqual(config.whisper.active_model_size, "base")
 
     def test_language_flow_and_vad_limit_sync(self):
@@ -158,8 +183,19 @@ class ConfigLoaderTest(unittest.TestCase):
         sync_whisper_vad_limit(config)
 
         self.assertEqual((source, target), ("en", "zh"))
-        self.assertEqual(config.whisper.language, "en")
+        self.assertEqual(config.whisper.language, "auto")
         self.assertEqual(config.whisper.vad_parameters["max_speech_duration_s"], 4.5)
+
+    def test_pure_english_environment_forces_english_language(self):
+        config = default_app_config()
+        config.translation.source_lang = "en"
+        config.translation.target_lang = "zh"
+        config.whisper.pure_english_environment = True
+
+        source, target = sync_language_flow(config)
+
+        self.assertEqual((source, target), ("en", "zh"))
+        self.assertEqual(config.whisper.language, "en")
 
     def test_serialize_user_settings_preserves_expected_sections(self):
         data = serialize_user_settings(default_app_config())

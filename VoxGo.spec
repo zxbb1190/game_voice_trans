@@ -39,7 +39,7 @@ if include_model:
         whisper_config.get("model_size", "small"),
         whisper_config.get("fast_model_size", ""),
     }
-    if whisper_config.get("enable_english_model", True):
+    if whisper_config.get("pure_english_environment", False):
         model_sizes.add(whisper_config.get("english_model_size", "small.en"))
         model_sizes.add(whisper_config.get("fast_english_model_size", ""))
     for model_size in sorted(str(item or "").strip() for item in model_sizes):

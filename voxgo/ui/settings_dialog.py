@@ -251,6 +251,22 @@ class SettingsDialog(QDialog):
         self.whisper_device_combo.currentIndexChanged.connect(self._preview)
         audio_form.addRow(_tr(self._ui_language, "识别设备", "Recognition Device"), self.whisper_device_combo)
 
+        self.pure_english_environment_check = QCheckBox(_tr(
+            self._ui_language,
+            "纯英文环境，使用英文专用模型加速",
+            "Pure English environment, use English-only model for speed",
+        ))
+        self.pure_english_environment_check.setChecked(
+            bool(getattr(self.whisper_config, "pure_english_environment", False))
+        )
+        self.pure_english_environment_check.setToolTip(_tr(
+            self._ui_language,
+            "默认关闭：使用多语言模型检测输入语言，中文声音会被跳过。\n只有音频几乎全是英文时才建议开启。",
+            "Off by default: the multilingual model detects the input language, so Chinese audio can be skipped.\nEnable only when the audio is almost entirely English.",
+        ))
+        self.pure_english_environment_check.stateChanged.connect(self._preview)
+        audio_form.addRow(_tr(self._ui_language, "英文快路径", "English Fast Path"), self.pure_english_environment_check)
+
         self.latency_hint_label = QLabel()
         self.latency_hint_label.setWordWrap(True)
         self.latency_hint_label.setMinimumHeight(42)
@@ -896,6 +912,8 @@ class SettingsDialog(QDialog):
         self.translation_config.model = self.model_input.text().strip() or self.translation_config.model
         self.translation_config.endpoint = self.endpoint_input.text().strip() or self.translation_config.endpoint
         self.whisper_config.device = _normalize_whisper_device(self.whisper_device_combo.currentData())
+        self.whisper_config.pure_english_environment = bool(self.pure_english_environment_check.isChecked())
+        self.whisper_config.enable_english_model = self.whisper_config.pure_english_environment
         selected_download_source = self.model_download_source_combo.currentData()
         self.whisper_config.model_download_source = _normalize_model_download_source(
             selected_download_source,

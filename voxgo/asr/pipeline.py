@@ -795,7 +795,8 @@ class SpeechPipeline:
         policy = RecognitionModePolicy.from_audio_config(config.audio)
         source_lang = str(getattr(getattr(config, "translation", None), "source_lang", "") or "").strip().lower()
         target_lang = str(getattr(getattr(config, "translation", None), "target_lang", "") or "").strip().lower()
-        if source_lang == "en" and target_lang == "zh":
+        pure_english = bool(getattr(getattr(config, "whisper", None), "pure_english_environment", False))
+        if source_lang == "en" and target_lang == "zh" and pure_english:
             policy = self._english_mode_policy(policy)
         self._pending_buffer.timeout_seconds = policy.pending_timeout_seconds
         self._busy_weak_buffer.timeout_seconds = max(0.0, policy.busy_weak_delay_seconds)
