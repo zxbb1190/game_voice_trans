@@ -25,9 +25,9 @@ LANGUAGE_ALIASES = {
 LANGUAGE_NAMES = {"en": "英语", "zh": "中文"}
 OPPOSITE_LANGUAGE = {"en": "zh", "zh": "en"}
 WHISPER_DEVICE_NAMES = {
-    "cpu": "CPU（推荐）",
-    "auto": "自动检测",
+    "auto": "自动检测（GPU 优先）",
     "cuda": "NVIDIA GPU / CUDA",
+    "cpu": "CPU",
 }
 
 
@@ -111,7 +111,7 @@ def normalize_whisper_device(value: str) -> str:
         "自动检测": "auto",
     }
     value = aliases.get(value, value)
-    return value if value in WHISPER_DEVICE_NAMES else "cpu"
+    return value if value in WHISPER_DEVICE_NAMES else "auto"
 
 
 def ui_language_of(config) -> str:

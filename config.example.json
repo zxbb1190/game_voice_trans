@@ -32,7 +32,7 @@
     "enable_english_model": false,
     "english_model_size": "small.en",
     "fast_english_model_size": "base.en",
-    "device": "cpu",
+    "device": "auto",
     "compute_type": "auto",
     "auto_cpu_threads": true,
     "cpu_threads": 2,

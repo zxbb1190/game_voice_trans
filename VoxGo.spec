@@ -72,7 +72,14 @@ binaries = [
     (str(system32 / "msvcp140_2.dll"), "PyQt5/Qt5/bin"),
 ]
 if include_cuda_runtime:
-    binaries.append((str(site_packages / "ctranslate2" / "cudnn64_9.dll"), "ctranslate2"))
+    cuda_runtime_dir = root / "runtime" / "cuda"
+    if cuda_runtime_dir.exists():
+        for dll_path in sorted(cuda_runtime_dir.glob("*.dll")):
+            binaries.append((str(dll_path), "runtime/cuda"))
+    for dll_name in ("cudnn64_9.dll", "ctranslate2.dll", "libiomp5md.dll"):
+        dll_path = site_packages / "ctranslate2" / dll_name
+        if dll_path.exists():
+            binaries.append((str(dll_path), "ctranslate2"))
 
 hiddenimports = [
     "uvicorn.lifespan.on",
@@ -139,15 +146,39 @@ a = Analysis(
 if not include_cuda_runtime:
     cuda_runtime_names = {
         "cudnn64_9.dll",
+        "cudnn_adv64_9.dll",
+        "cudnn_cnn64_9.dll",
+        "cudnn_ops64_9.dll",
         "cublas64_12.dll",
         "cublaslt64_12.dll",
         "cudart64_12.dll",
+        "nvrtc64_120_0.dll",
+        "nvrtc-builtins64_120.dll",
     }
     a.binaries = [
         item
         for item in a.binaries
         if Path(item[0]).name.lower() not in cuda_runtime_names
         and Path(item[1]).name.lower() not in cuda_runtime_names
+    ]
+else:
+    bundled_cuda_runtime_names = {
+        "cublas64_12.dll",
+        "cublaslt64_12.dll",
+        "cudart64_12.dll",
+        "cudnn64_9.dll",
+        "cudnn_adv64_9.dll",
+        "cudnn_cnn64_9.dll",
+        "cudnn_ops64_9.dll",
+        "nvrtc64_120_0.dll",
+        "nvrtc-builtins64_120.dll",
+    }
+    a.binaries = [
+        item
+        for item in a.binaries
+        if Path(item[0]).name.lower() not in bundled_cuda_runtime_names
+        or Path(item[0]).as_posix().lower().startswith("runtime/cuda/")
+        or Path(item[0]).as_posix().lower().startswith("ctranslate2/")
     ]
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)

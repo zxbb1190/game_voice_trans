@@ -51,6 +51,7 @@ CONFIG_SECTIONS = [
     "update",
 ]
 USER_SETTINGS_SECTIONS = ["audio", "overlay", "hotkeys", "translation", "whisper", "app", "debug", "update"]
+RECOGNITION_DEVICE_POLICY_VERSION = 2
 WHISPER_BEAM_SIZE_BY_LATENCY_MODE = {
     LATENCY_MODE_FAST: 1,
     LATENCY_MODE_BALANCED: 1,
@@ -141,6 +142,7 @@ def load_user_settings(config: AppConfig, runtime_dir: Path):
         with open(settings_path, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
         apply_section_data(config, data, USER_SETTINGS_SECTIONS)
+        migrate_recognition_device_policy(config, data)
         if "latency_mode" not in data.get("audio", {}):
             config.audio.latency_mode = ""
         migrate_legacy_model_download_settings(config, data.get("whisper", {}))
@@ -159,6 +161,19 @@ def migrate_legacy_model_download_settings(config: AppConfig, whisper_data: dict
     endpoint = normalize_model_download_endpoint(whisper_data.get("model_download_endpoint", ""))
     if endpoint and "model_download_source" not in whisper_data:
         config.whisper.model_download_source = MODEL_DOWNLOAD_SOURCE_CUSTOM_HF_ENDPOINT
+
+
+def migrate_recognition_device_policy(config: AppConfig, user_settings_data: dict):
+    app_data = user_settings_data.get("app", {}) if isinstance(user_settings_data, dict) else {}
+    whisper_data = user_settings_data.get("whisper", {}) if isinstance(user_settings_data, dict) else {}
+    try:
+        version = int(app_data.get("recognition_device_policy_version", 0) or 0)
+    except Exception:
+        version = 0
+    if version >= RECOGNITION_DEVICE_POLICY_VERSION:
+        return
+    if normalize_whisper_device(whisper_data.get("device", "")) == "cpu":
+        config.whisper.device = "auto"
 
 
 def migrate_runtime_defaults(config: AppConfig, preserve_existing_audio_tuning: bool = True):
@@ -394,6 +409,7 @@ def serialize_user_settings(config: AppConfig) -> dict:
         "app": {
             "setup_completed": bool(getattr(config.app, "setup_completed", False)),
             "language": normalize_ui_language(getattr(config.app, "language", UI_LANGUAGE_ZH)),
+            "recognition_device_policy_version": RECOGNITION_DEVICE_POLICY_VERSION,
         },
         "audio": {
             "latency_mode": config.audio.latency_mode,
@@ -509,9 +525,13 @@ def sync_language_flow(config: AppConfig):
         target = OPPOSITE_LANGUAGE[source]
     config.translation.source_lang = source
     config.translation.target_lang = target
-    # The selected source language is the recognition language. Keep model choice
-    # separate so English fast path can still be only about using *.en models.
-    config.whisper.language = source if source in OPPOSITE_LANGUAGE else "auto"
+    # Keep translation direction separate from Whisper language forcing.  In the
+    # normal en->zh flow, auto language detection prevents Chinese speech from
+    # being forced into plausible English text and then entering translation.
+    if source == "en" and not bool(getattr(config.whisper, "pure_english_environment", False)):
+        config.whisper.language = "auto"
+    else:
+        config.whisper.language = source if source in OPPOSITE_LANGUAGE else "auto"
     return source, target
 
 

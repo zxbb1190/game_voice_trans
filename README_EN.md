@@ -63,7 +63,15 @@ Double-click `install.bat`, or run:
 pip install -r requirements.txt
 ```
 
-If you use a portable Release package, unzip it and run `VoxGo.exe`. The lite package downloads the Whisper model on first run; the full package already includes Whisper small and is better for unstable networks.
+If you use a portable Release package, unzip it and run `VoxGo.exe`. Starting with v0.3.1 there are 3 packages:
+
+| Package | Contents | Best for |
+|---------|----------|----------|
+| Lite | No Whisper model, no CUDA DLLs, smallest archive; downloads the model on first use | Most users who can download the model |
+| Full | Bundled Whisper small model, no CUDA DLLs | CPU users with unstable model-download networks |
+| Full-CUDA / GPU | Bundled Whisper small model plus CUDA DLLs | NVIDIA users who want GPU recognition immediately |
+
+Lite and Full do not download CUDA DLLs at startup. CUDA is checked only when you explicitly select `NVIDIA GPU / CUDA` in settings. VoxGo detects the current GPU first: AMD/Intel users get a clear "GPU unavailable" notice and keep the previous device; NVIDIA users without bundled CUDA DLLs are prompted while VoxGo downloads the CUDA runtime from the current Release into the app folder, then GPU takes effect after restart.
 
 ### 2. Complete The First-Run Wizard
 The first launch opens the setup wizard before Whisper starts loading. Complete this loop:
@@ -198,8 +206,8 @@ Edit `config.json` or use the overlay settings:
 | `app.setup_completed` | Whether the first-run wizard has been completed; saved to `user_settings.json` after setup |
 | `debug.enabled` | Whether debug mode records the latest end-to-end latency |
 | `whisper.model_size` | Whisper model size: tiny/base/small/medium |
-| `whisper.device` | Recognition device, default `cpu`; users can change it from the gear settings under Recognition Device. Use `auto` or `cuda` only after installing a matching NVIDIA CUDA runtime |
-| `whisper.compute_type` | Compute precision, default `auto`: int8 on CPU, float16 on CUDA |
+| `whisper.device` | Recognition device, default `auto`: try NVIDIA GPU first, then fall back to CPU with a visible reason. Users can also choose `cpu` or `cuda` manually |
+| `whisper.compute_type` | Compute precision, default `auto`: int8 on CPU; CUDA tries float16 then float32 before falling back to CPU |
 | `whisper.auto_cpu_threads` | Whether to choose recognition thread count from CPU cores automatically, enabled by default; disable it to use `whisper.cpu_threads` |
 | `whisper.cpu_threads` | CPU load/recognition threads, default 2; keeping this small is more stable after a first-run model download |
 | `whisper.num_workers` | Whisper worker count, default 1; increasing it uses more memory |
@@ -270,9 +278,9 @@ Edit `config.json` or use the overlay settings:
 
 ### Startup Says cublas64_12.dll Is Missing
 - This means the CUDA/cuBLAS runtime is missing; it is not a translation API problem.
-- The default configuration uses CPU recognition and does not require CUDA.
-- In the gear settings, change Recognition Device to `CPU (Recommended)`, then restart the app.
-- Use `cuda` only on an NVIDIA GPU machine with a matching CUDA 12 and cuDNN runtime for faster-whisper/ctranslate2.
+- Lite and Full do not bundle CUDA DLLs and do not download them at startup; Full-CUDA / GPU bundles them.
+- When you select `NVIDIA GPU / CUDA`, VoxGo detects the GPU first. AMD/Intel GPUs are not supported for this CUDA path and will keep the previous device.
+- On NVIDIA machines, Lite/Full can download the CUDA runtime on demand. Restart VoxGo after the download completes; if it fails, the app explains why and falls back to CPU.
 
 ### Lite Package Model Download Is Slow Or Fails
 - The overlay shows the Whisper model, repository, download source, downloaded size, total size, and percentage.
@@ -295,7 +303,7 @@ This tool captures Windows system playback audio. It is not hard-coded for speci
 Some games, anti-cheat systems, exclusive audio mode, remote streaming tools, DRM protection, or special sound drivers may block capture. Use another output device, disable exclusive mode, or route audio through VB-Cable when needed.
 
 ## Notes
-1. The first run may download the Whisper model.
+1. Lite downloads the Whisper model on first use; Full and Full-CUDA include Whisper small.
 2. Translation requires network access unless you use a local model.
 3. Start this app before joining a game voice session.
 4. Keep the mobile page open if you use mobile mirroring.

@@ -246,7 +246,9 @@ class SettingsDialog(QDialog):
         audio_form.addRow(_tr(self._ui_language, "响应模式", "Response Mode"), self.latency_mode_combo)
 
         self.whisper_device_combo = QComboBox()
-        self.whisper_device_combo.setToolTip("普通用户选 CPU；自动/GPU 需要本机有可用 NVIDIA CUDA 运行环境")
+        self.whisper_device_combo.setToolTip(
+            "自动检测会优先尝试 NVIDIA GPU，失败后降级 CPU；手动选择 NVIDIA GPU / CUDA 时，如本包未内置 CUDA DLL，会先检测 NVIDIA 显卡并按需下载运行库"
+        )
         self._fill_whisper_devices()
         self.whisper_device_combo.currentIndexChanged.connect(self._preview)
         audio_form.addRow(_tr(self._ui_language, "识别设备", "Recognition Device"), self.whisper_device_combo)

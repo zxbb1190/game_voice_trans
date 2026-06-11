@@ -561,7 +561,7 @@ var _hmt = _hmt || [];
         <p class="lead">Capture Windows system audio, transcribe speech locally with Whisper, and show translated
           subtitles in a lightweight game overlay.</p>
         <div class="actions"><a class="btn btn-primary"
-            href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-lite.zip">Download
+            href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-lite.zip">Download
             Lite</a><a class="btn"
             href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/latest">Latest Release</a><a
             class="btn" href="https://github.com/zxbb1190/VoxGo_game_voice_trans">GitHub</a></div>
@@ -645,8 +645,8 @@ var _hmt = _hmt || [];
       <div class="container">
         <div class="section-head">
           <h2>Download VoxGo</h2>
-          <p>Start with Lite if your network can download the Whisper model. Use Full if you want the model bundled in
-            the archive.</p>
+          <p>Start with Lite if your network can download the Whisper model. Use Full if you want the model bundled, or
+            Full-CUDA / GPU if you are on NVIDIA and want GPU recognition immediately.</p>
         </div>
         <div class="download">
           <div class="card download-card">
@@ -655,16 +655,24 @@ var _hmt = _hmt || [];
             <p>Smaller download. On first run, VoxGo downloads the speech recognition model and guides you through API
               and audio tests.</p>
             <a class="btn btn-primary"
-              href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-lite.zip">Download
-              VoxGo v0.3.0 Lite</a>
+              href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-lite.zip">Download
+              VoxGo v0.3.1 Lite</a>
           </div>
           <div class="card download-card">
             <span class="tag">Bundled model</span>
             <h3>Full package</h3>
-            <p>Larger download. Includes the Whisper small model, useful when model downloads are slow or blocked.</p>
+            <p>Includes the Whisper small model and no CUDA DLLs, useful when model downloads are slow or blocked.</p>
             <a class="btn"
-              href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-full.zip">Download
-              VoxGo v0.3.0 Full</a>
+              href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-full.zip">Download
+              VoxGo v0.3.1 Full</a>
+          </div>
+          <div class="card download-card">
+            <span class="tag">NVIDIA GPU</span>
+            <h3>Full-CUDA / GPU package</h3>
+            <p>Includes the Whisper small model plus CUDA DLLs. Choose this package only for NVIDIA GPU machines.</p>
+            <a class="btn"
+              href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-full-cuda.zip">Download
+              VoxGo v0.3.1 GPU</a>
           </div>
         </div>
       </div>
@@ -680,7 +688,7 @@ var _hmt = _hmt || [];
         <div class="steps">
           <div class="card step"><strong>1</strong>
             <h3>Download</h3>
-            <p>Download Lite or Full and unzip the archive.</p>
+            <p>Download Lite, Full, or Full-CUDA and unzip the archive.</p>
           </div>
           <div class="card step"><strong>2</strong>
             <h3>Run VoxGo</h3>
@@ -729,8 +737,10 @@ var _hmt = _hmt || [];
             <p>The current public UI focuses on English and Chinese: English to Chinese and Chinese to English.</p>
           </details>
           <details>
-            <summary>Lite or Full?</summary>
-            <p>Lite is smaller and downloads the Whisper model on first run. Full is larger and includes the model.</p>
+            <summary>Lite, Full, or Full-CUDA?</summary>
+            <p>Lite has no model and no CUDA DLLs. Full includes Whisper small but no CUDA DLLs. Full-CUDA includes both
+              the model and CUDA DLLs for NVIDIA users. Lite/Full do not download CUDA at startup; on-demand CUDA
+              download happens only after manually selecting GPU.</p>
           </details>
         </div>
       </div>

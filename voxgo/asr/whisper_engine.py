@@ -19,6 +19,11 @@ from urllib.request import Request, urlopen
 
 import numpy as np
 import soxr
+
+from voxgo.runtime.dll_paths import configure_local_dll_paths
+
+configure_local_dll_paths()
+
 from faster_whisper import WhisperModel
 try:
     from faster_whisper.utils import _MODELS as FASTER_WHISPER_MODEL_REPOS
@@ -176,7 +181,7 @@ class WhisperConfig:
     english_model_size: str = "small.en"
     fast_english_model_size: str = ""
     active_model_size: str = ""
-    device: str = "cpu"
+    device: str = "auto"
     compute_type: str = "auto"
     auto_cpu_threads: bool = True
     cpu_threads: int = 2
@@ -234,15 +239,23 @@ class SpeechRecognizer:
         self,
         config: WhisperConfig = None,
         download_progress_callback: Optional[Callable[[ModelDownloadProgress], None]] = None,
+        device_fallback_callback: Optional[Callable[[str, str], None]] = None,
     ):
         self.config = config or WhisperConfig()
         if self.config.vad_parameters is None:
             self.config.vad_parameters = DEFAULT_VAD_PARAMS.copy()
         self.config.vad_parameters = sanitize_vad_parameters(self.config.vad_parameters)
         self._download_progress_callback = download_progress_callback
+        self._device_fallback_callback = device_fallback_callback
         self._model: Optional[WhisperModel] = None
         self._model_path: Optional[str] = None
         self._loaded_model_size: str = ""
+        self._runtime_device = ""
+        self._runtime_compute_type = ""
+        self._cuda_runtime_disabled = False
+        self._pending_cpu_fallback_notice = None
+        self._notified_device_fallbacks = set()
+        self._last_cuda_availability_error = ""
         self._initialized = False
         self._model_dir = Path(self.config.model_dir)
         if not self._model_dir.is_absolute():
@@ -265,6 +278,8 @@ class SpeechRecognizer:
         self._model_dir.mkdir(parents=True, exist_ok=True)
         self._ensure_model_downloaded()
         self._release_model_loader_memory()
+        self._runtime_device = ""
+        self._runtime_compute_type = ""
         last_error = None
         for device, compute_type in self._model_load_candidates():
             runtime_options = self._model_runtime_options(device)
@@ -289,14 +304,23 @@ class SpeechRecognizer:
                         local_files_only=self.config.local_files_only,
                         **runtime_options,
                     )
-                    self.config.device = device
-                    self.config.compute_type = compute_type
+                    self._runtime_device = device
+                    self._runtime_compute_type = compute_type
                     self._loaded_model_size = effective_model
                     self._initialized = True
+                    if device == "cuda":
+                        self._pending_cpu_fallback_notice = None
+                    elif device == "cpu":
+                        self._notify_pending_cpu_fallback()
                     logger.info("Whisper 模型加载完成")
                     return
                 except Exception as e:
                     last_error = e
+                    if device == "cuda":
+                        self._record_cpu_fallback_notice(
+                            "cuda_model_load_failed",
+                            f"CUDA 模型加载失败，已自动降级到 CPU。失败配置: compute_type={compute_type}。错误: {e}",
+                        )
                     self._release_model_loader_memory()
                     if attempt < max_attempts and self._is_memory_allocation_error(e):
                         logger.warning(
@@ -333,6 +357,38 @@ class SpeechRecognizer:
     def _is_memory_allocation_error(self, error: Exception) -> bool:
         text = str(error).lower()
         return "mkl_malloc" in text or "failed to allocate memory" in text or "bad allocation" in text
+
+    def _is_cuda_transcription_runtime_error(self, error: Exception) -> bool:
+        text = str(error).lower()
+        markers = (
+            "cuda",
+            "cublas",
+            "cudnn",
+            "cufft",
+            "curand",
+            "cusolver",
+            "cublas64",
+            "cudnn64",
+        )
+        return any(marker in text for marker in markers)
+
+    def _record_cpu_fallback_notice(self, reason: str, message: str):
+        self._pending_cpu_fallback_notice = (reason, message)
+
+    def _notify_pending_cpu_fallback(self):
+        notice = self._pending_cpu_fallback_notice
+        if not notice:
+            return
+        self._pending_cpu_fallback_notice = None
+        reason, message = notice
+        if reason in self._notified_device_fallbacks:
+            return
+        self._notified_device_fallbacks.add(reason)
+        if self._device_fallback_callback:
+            try:
+                self._device_fallback_callback(reason, message)
+            except Exception as exc:
+                logger.debug("device fallback callback failed: {}", exc)
 
     def _ensure_model_downloaded(self):
         if self.config.local_files_only:
@@ -675,16 +731,28 @@ class SpeechRecognizer:
 
     def _model_load_candidates(self):
         configured_device = (self.config.device or "auto").strip().lower()
+        if self._cuda_runtime_disabled and configured_device in ("auto", "cuda"):
+            logger.warning("CUDA runtime failed during transcription; using CPU for the rest of this session")
+            self._record_cpu_fallback_notice(
+                "cuda_runtime_disabled",
+                "CUDA 运行时在识别过程中失败，本次会话已自动降级到 CPU。请检查本机或 App 随包的 CUDA DLL 是否完整。",
+            )
+            return [("cpu", "int8")]
         if configured_device == "auto":
             if not self._is_cuda_runtime_available():
+                detail = self._last_cuda_availability_error or "No NVIDIA CUDA device was detected."
+                self._record_cpu_fallback_notice(
+                    "cuda_unavailable",
+                    f"GPU/CUDA is not available, so VoxGo is using CPU. Reason: {detail}",
+                )
                 logger.info("未检测到可用 CUDA 运行环境，Whisper 使用 CPU")
                 return [("cpu", "int8")]
             return [
-                ("cuda", self._compute_type_for_device("cuda")),
+                *self._compute_candidates_for_device("cuda"),
                 ("cpu", "int8"),
             ]
 
-        candidates = [(configured_device, self._compute_type_for_device(configured_device))]
+        candidates = self._compute_candidates_for_device(configured_device)
         if configured_device != "cpu":
             candidates.append(("cpu", "int8"))
         elif candidates[0][1] != "int8":
@@ -692,9 +760,15 @@ class SpeechRecognizer:
         return candidates
 
     def _is_cuda_runtime_available(self) -> bool:
+        self._last_cuda_availability_error = "CUDA runtime check failed."
         try:
             import ctranslate2
-            return ctranslate2.get_cuda_device_count() > 0
+            count = ctranslate2.get_cuda_device_count()
+            if count <= 0:
+                self._last_cuda_availability_error = "ctranslate2 detected 0 CUDA devices."
+                return False
+            self._last_cuda_availability_error = ""
+            return True
         except Exception as e:
             logger.debug("CUDA 运行环境不可用: {}", e)
             return False
@@ -704,6 +778,14 @@ class SpeechRecognizer:
         if configured in ("", "auto", "default"):
             return "float16" if device == "cuda" else "int8"
         return configured
+
+    def _compute_candidates_for_device(self, device: str) -> list:
+        configured = (self.config.compute_type or "auto").strip().lower()
+        if configured not in ("", "auto", "default"):
+            return [(device, configured)]
+        if device == "cuda":
+            return [("cuda", "float16"), ("cuda", "float32")]
+        return [(device, "int8")]
 
     def _model_runtime_options(self, device: str) -> dict:
         cpu_threads = self._resolved_cpu_threads()
@@ -824,10 +906,27 @@ class SpeechRecognizer:
         audio_array = self._normalize_for_transcription(audio_array)
 
         # 转录
-        start_time = time.time()
         configured_language = self.config.language if language_override is None else language_override
         language = None if configured_language in (None, "", "auto") else configured_language
         initial_prompt = self._initial_prompt()
+        try:
+            return self._transcribe_audio_array(audio_array, language, initial_prompt)
+        except Exception as e:
+            if self.runtime_device == "cuda" and self._is_cuda_transcription_runtime_error(e):
+                logger.warning("CUDA transcription failed; falling back to CPU for this session: {}", e)
+                self._cuda_runtime_disabled = True
+                self.cleanup()
+                self.initialize()
+                return self._transcribe_audio_array(audio_array, language, initial_prompt)
+            raise
+
+    def _transcribe_audio_array(
+        self,
+        audio_array: np.ndarray,
+        language: Optional[str],
+        initial_prompt: Optional[str],
+    ) -> TranscriptionResult:
+        start_time = time.time()
         segments, info = self._model.transcribe(
             audio_array,
             language=language,
@@ -924,6 +1023,14 @@ class SpeechRecognizer:
             None, self.transcribe_audio_bytes, audio_bytes, sample_rate
         )
 
+    @property
+    def runtime_device(self) -> str:
+        return self._runtime_device or str(getattr(self.config, "device", "") or "")
+
+    @property
+    def runtime_compute_type(self) -> str:
+        return self._runtime_compute_type or str(getattr(self.config, "compute_type", "") or "")
+
     def get_model_info(self) -> dict:
         """获取模型信息"""
         if not self._initialized:
@@ -934,8 +1041,12 @@ class SpeechRecognizer:
             "fast_model_size": getattr(self.config, "fast_model_size", ""),
             "english_model_size": getattr(self.config, "english_model_size", ""),
             "fast_english_model_size": getattr(self.config, "fast_english_model_size", ""),
-            "device": self.config.device,
-            "compute_type": self.config.compute_type,
+            "device": self.runtime_device,
+            "compute_type": self.runtime_compute_type,
+            "runtime_device": self.runtime_device,
+            "runtime_compute_type": self.runtime_compute_type,
+            "configured_device": self.config.device,
+            "configured_compute_type": self.config.compute_type,
             "language": self.config.language,
             "prompt_profile": self.config.prompt_profile,
         }
@@ -965,6 +1076,8 @@ class SpeechRecognizer:
         self._model = None
         self._model_path = None
         self._loaded_model_size = ""
+        self._runtime_device = ""
+        self._runtime_compute_type = ""
         self._initialized = False
 
 

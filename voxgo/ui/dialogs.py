@@ -139,7 +139,12 @@ class UpdatePromptDialog(QDialog):
         )
 
     def _open_download_page(self):
-        url = self._update.release_url or self._update.download_lite_url or self._update.download_full_url
+        url = (
+            self._update.release_url
+            or self._update.download_lite_url
+            or self._update.download_full_url
+            or getattr(self._update, "download_full_cuda_url", "")
+        )
         if url:
             webbrowser.open(url)
         self.close()

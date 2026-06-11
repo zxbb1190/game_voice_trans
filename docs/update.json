@@ -1,16 +1,21 @@
-﻿{
-    "latest":  "0.3.0",
-    "channel":  "stable",
-    "title":  "VoxGo v0.3.0",
-    "notes":  [
-                  "Improved English realtime recognition latency for game voice.",
-                  "Reduced balanced-mode segmentation delay and queue contention for short voice lines.",
-                  "Added richer latency diagnostics including model, device, candidate labels, and fast-path status."
-              ],
-    "release_url":  "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/tag/v0.3.0",
-    "download_lite_url":  "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-lite.zip",
-    "download_full_url":  "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-full.zip",
-    "sha256_lite":  "7e86d6681420977970229241a748ec4643e34b386d0c1b32f78510ead43efb00",
-    "sha256_full":  "e10999a81a081bdb5c9fac2d3b07e8c35c8e72673dc0d52339803f9939f05845",
-    "mandatory":  false
+{
+  "latest": "0.3.1",
+  "channel": "stable",
+  "title": "VoxGo v0.3.1",
+  "notes": [
+    "Recognition now defaults to GPU-first auto mode and visibly explains CPU fallback reasons.",
+    "Added Lite, Full, and Full-CUDA package strategy; Lite/Full can download CUDA runtime on demand for NVIDIA users.",
+    "Fixed recognition device persistence so runtime CPU fallback no longer overwrites the user's selected device.",
+    "Improved English-to-Chinese language gating to avoid Chinese speech entering the translation queue as English."
+  ],
+  "release_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/tag/v0.3.1",
+  "download_lite_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-lite.zip",
+  "download_full_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-full.zip",
+  "download_full_cuda_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-full-cuda.zip",
+  "cuda_runtime_url": "https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-cuda-runtime.zip",
+  "sha256_lite": "175b7acff201d690e600f7ff65a16a05bc1e0bf6afd6f5a7809b5352f56742b9",
+  "sha256_full": "c126fcf0b0004138c8359d235de096ce37614837403296cf2b1de38f1d13c168",
+  "sha256_full_cuda": "d90a3692838778dde9af0e55cf629b9bf8a76b65a2f6c83d921a65a1ce68009e",
+  "sha256_cuda_runtime": "11e76fdb4490a8d5b31a201a32b5068b765cdf37598d89071fdae71027d112c3",
+  "mandatory": false
 }

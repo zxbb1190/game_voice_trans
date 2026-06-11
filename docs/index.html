@@ -673,7 +673,7 @@ var _hmt = _hmt || [];
         <h1><span class="gradient-text">听不懂外国队友语音？</span><br />开一个游戏字幕浮窗。</h1>
         <p class="lead">捕获 Windows 系统声音，将游戏、Discord、视频或直播语音实时识别并翻译成字幕。当前支持英语 ↔ 中文双向，首次启动会带你测试 API Key 和系统声音，再进入游戏验证。</p>
         <div class="actions"><a class="btn btn-primary"
-            href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-lite.zip">下载
+            href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-lite.zip">下载
             Lite 版</a><a class="btn" href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/latest">查看
             Release</a><a class="btn" href="https://github.com/zxbb1190/VoxGo_game_voice_trans">GitHub 源码</a></div>
         <div class="hero-notes"><span class="pill">英语 ↔ 中文</span><span class="pill">首次启动向导</span><span class="pill">API
@@ -748,22 +748,29 @@ var _hmt = _hmt || [];
       <div class="container">
         <div class="section-head">
           <h2>选择适合你的下载版本</h2>
-          <p>第一次体验建议下载 Lite 版。解压运行后先走首次启动向导，确认 API Key 和音频设备都可用；网络环境较差时可以选择 Full 版。</p>
+          <p>第一次体验建议下载 Lite 版。网络环境较差可选 Full；NVIDIA 显卡用户想直接使用 GPU 识别可下载 Full-CUDA / GPU 版。</p>
         </div>
         <div class="download">
           <div class="card download-card recommended"><span class="tag">推荐</span>
             <h3>Lite 版</h3>
             <p>体积更小，适合大多数用户。首次运行时会下载语音识别模型，并先通过向导测试翻译接口和系统声音。</p>
             <div class="price-line">适合：第一次尝试、网络可用、想要更小下载包。</div><a class="btn btn-primary"
-              href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-lite.zip">下载
+              href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-lite.zip">下载
               Lite 版</a>
           </div>
           <div class="card download-card"><span class="tag">完整包</span>
             <h3>Full 版</h3>
-            <p>内置 Whisper small 模型，下载包更大，但解压后不需要首次下载模型，适合网络不稳定或无法访问模型源的用户。</p>
+            <p>内置 Whisper small 模型，不带 CUDA DLL，适合网络不稳定或无法访问模型源的 CPU 用户。</p>
             <div class="price-line">适合：网络较差、想减少首次启动等待。</div><a class="btn"
-              href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.0/VoxGo-v0.3.0-full.zip">下载
+              href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-full.zip">下载
               Full 版</a>
+          </div>
+          <div class="card download-card"><span class="tag">NVIDIA GPU</span>
+            <h3>Full-CUDA / GPU 版</h3>
+            <p>内置 Whisper small 模型和 CUDA DLL，解压后可直接尝试 NVIDIA GPU 识别；AMD/Intel 显卡请使用 Lite 或 Full。</p>
+            <div class="price-line">适合：NVIDIA 显卡、想减少 GPU 配置步骤。</div><a class="btn"
+              href="https://github.com/zxbb1190/VoxGo_game_voice_trans/releases/download/v0.3.1/VoxGo-v0.3.1-full-cuda.zip">下载
+              GPU 版</a>
           </div>
         </div>
       </div>
@@ -777,7 +784,7 @@ var _hmt = _hmt || [];
         <div class="steps">
           <div class="card step">
             <h3>下载并解压</h3>
-            <p>下载 Lite 或 Full 包，解压后运行 VoxGo.exe。</p>
+            <p>下载 Lite、Full 或 Full-CUDA 包，解压后运行 VoxGo.exe。</p>
           </div>
           <div class="card step">
             <h3>测试 API Key</h3>
@@ -827,8 +834,8 @@ var _hmt = _hmt || [];
             <p>当前正式支持英语和中文双向：英语 → 中文、中文 → 英语。其它语言暂未在界面和识别/翻译流程中开放为可选项。</p>
           </details>
           <details>
-            <summary>Lite 和 Full 有什么区别？</summary>
-            <p>Lite 包更小，首次运行会下载 Whisper 模型；Full 包更大，内置 Whisper small 模型，适合网络不稳定的用户。</p>
+            <summary>Lite、Full 和 Full-CUDA 有什么区别？</summary>
+            <p>Lite 不带模型也不带 CUDA DLL，体积最小；Full 带 Whisper small 模型但不带 CUDA DLL；Full-CUDA 同时带模型和 CUDA DLL，给 NVIDIA 用户单独下载。Lite/Full 不会启动时下载 CUDA，只有手动选择 GPU 时才会检测 NVIDIA 并按需下载运行库。</p>
           </details>
           <details>
             <summary>支持哪些游戏？</summary>

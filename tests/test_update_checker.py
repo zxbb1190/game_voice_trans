@@ -29,6 +29,9 @@ class UpdateCheckerTest(unittest.TestCase):
                 "channel": "beta",
                 "notes": "- one\n- two",
                 "download_lite_url": "https://example.com/lite.zip",
+                "download_full_cuda_url": "https://example.com/full-cuda.zip",
+                "cuda_runtime_url": "https://example.com/cuda-runtime.zip",
+                "sha256_full_cuda": "abc123",
             }
         )
 
@@ -36,6 +39,9 @@ class UpdateCheckerTest(unittest.TestCase):
         self.assertEqual(info.channel, "beta")
         self.assertEqual(info.notes, ["one", "two"])
         self.assertEqual(info.download_lite_url, "https://example.com/lite.zip")
+        self.assertEqual(info.download_full_cuda_url, "https://example.com/full-cuda.zip")
+        self.assertEqual(info.cuda_runtime_url, "https://example.com/cuda-runtime.zip")
+        self.assertEqual(info.sha256_full_cuda, "abc123")
 
     def test_check_for_update_reports_available_current_and_ignored(self):
         fetcher = lambda url: {"latest": "0.3.0", "channel": "stable", "title": "VoxGo v0.3.0"}

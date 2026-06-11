@@ -10,6 +10,10 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from voxgo.runtime.dll_paths import configure_local_dll_paths
+
+configure_local_dll_paths()
+
 from loguru import logger
 
 from voxgo.app_info import APP_NAME, APP_VERSION
@@ -27,6 +31,7 @@ from voxgo.translation import (
     should_skip_translation_for_language,
 )
 from voxgo.update.checker import UpdateSettings
+from voxgo.i18n import normalize_ui_language, ui_text
 from voxgo.config.loader import (
     apply_language_runtime_policy,
     load_config as load_app_config,
@@ -46,6 +51,12 @@ from voxgo.config.schema import (
 from voxgo.mobile.runtime import MobileRuntime
 from voxgo.update.runtime import UpdateRuntime
 from voxgo.runtime.banner import print_startup_banner
+from voxgo.runtime.cuda_runtime import (
+    detect_nvidia_gpu,
+    download_and_install_cuda_runtime,
+    has_local_cuda_runtime,
+    resolve_cuda_runtime_download_url,
+)
 from voxgo.runtime.events import AppNotice, EventBus, TranscriptReady, TranslationReady
 from voxgo.runtime.hotkeys import HotkeyManager
 from voxgo.runtime.settings_controller import OverlaySettingsController
@@ -91,6 +102,7 @@ class VoxGoApp:
         )
         self._audio_timer = None
         self._startup_thread: Optional[threading.Thread] = None
+        self._cuda_runtime_download_thread: Optional[threading.Thread] = None
         self._startup_signals = None
         self._backend_ready = False
         self._running = False
@@ -464,6 +476,131 @@ class VoxGoApp:
         else:
             self._pending_notices.append((original, message))
 
+    def _notify_recognition_device_fallback(self, reason: str, message: str):
+        logger.warning("recognition device fallback: reason={}, message={}", reason, message)
+        self._notify_user("识别设备已降级到 CPU", message, "警告")
+
+    def _prepare_cuda_runtime_for_gpu_selection(self, ui_language: str) -> bool:
+        ui_language = normalize_ui_language(ui_language)
+        if has_local_cuda_runtime():
+            return True
+
+        detection = detect_nvidia_gpu()
+        adapter_names = ", ".join(detection.adapter_names) or ui_text(
+            ui_language,
+            "未检测到显卡名称",
+            "No display adapter name detected",
+        )
+        if not detection.has_nvidia:
+            detail = ui_text(
+                ui_language,
+                f"当前显卡: {adapter_names}\nGPU 识别模式需要 NVIDIA CUDA，AMD/Intel 显卡暂不支持。已保持原来的识别设备。",
+                f"Current GPU: {adapter_names}\nGPU recognition requires NVIDIA CUDA. AMD/Intel GPUs are not supported. VoxGo kept the previous recognition device.",
+            )
+            if detection.error:
+                detail += ui_text(
+                    ui_language,
+                    f"\n检测详情: {detection.error}",
+                    f"\nDetection detail: {detection.error}",
+                )
+            self._notify_user(
+                ui_text(ui_language, "GPU 模式不可用", "GPU Mode Unavailable"),
+                detail,
+                ui_text(ui_language, "警告", "Warning"),
+            )
+            logger.warning(
+                "CUDA device selection rejected: adapters={}, error={}",
+                detection.adapter_names,
+                detection.error,
+            )
+            return False
+
+        self._start_cuda_runtime_download(ui_language, adapter_names)
+        return True
+
+    def _start_cuda_runtime_download(self, ui_language: str, adapter_names: str):
+        if self._cuda_runtime_download_thread and self._cuda_runtime_download_thread.is_alive():
+            self._notify_user(
+                ui_text(ui_language, "CUDA 运行库下载中", "CUDA Runtime Downloading"),
+                ui_text(
+                    ui_language,
+                    "已检测到 NVIDIA 显卡，CUDA 运行库正在后台下载。完成后重启 VoxGo 即可启用 GPU。",
+                    "An NVIDIA GPU was detected. The CUDA runtime is downloading in the background. Restart VoxGo after it finishes to enable GPU.",
+                ),
+                ui_text(ui_language, "状态", "Status"),
+            )
+            return
+        self._notify_user(
+            ui_text(ui_language, "正在准备 GPU 模式", "Preparing GPU Mode"),
+            ui_text(
+                ui_language,
+                f"已检测到 NVIDIA 显卡: {adapter_names}\n当前包未内置 CUDA DLL，VoxGo 将从发布页下载 CUDA 运行库。",
+                f"NVIDIA GPU detected: {adapter_names}\nThis package does not include CUDA DLLs. VoxGo will download the CUDA runtime from the release page.",
+            ),
+            ui_text(ui_language, "状态", "Status"),
+        )
+        self._cuda_runtime_download_thread = threading.Thread(
+            target=self._download_cuda_runtime_worker,
+            args=(ui_language,),
+            name="cuda-runtime-download",
+            daemon=True,
+        )
+        self._cuda_runtime_download_thread.start()
+
+    def _download_cuda_runtime_worker(self, ui_language: str):
+        last_notice_at = 0.0
+
+        def _progress(downloaded: int, total: int):
+            nonlocal last_notice_at
+            now = time.time()
+            if total <= 0 or now - last_notice_at < 10:
+                return
+            last_notice_at = now
+            self._notify_user(
+                ui_text(ui_language, "CUDA 运行库下载中", "CUDA Runtime Downloading"),
+                ui_text(
+                    ui_language,
+                    f"{downloaded / 1024 / 1024:.0f} / {total / 1024 / 1024:.0f} MB",
+                    f"{downloaded / 1024 / 1024:.0f} / {total / 1024 / 1024:.0f} MB",
+                ),
+                ui_text(ui_language, "状态", "Status"),
+            )
+
+        try:
+            download_url = resolve_cuda_runtime_download_url()
+            self._notify_user(
+                ui_text(ui_language, "CUDA 运行库下载中", "CUDA Runtime Downloading"),
+                download_url,
+                ui_text(ui_language, "状态", "Status"),
+            )
+            result = download_and_install_cuda_runtime(progress_callback=_progress, url=download_url)
+            logger.info(
+                "CUDA runtime installed: dir={}, dlls={}, downloaded_bytes={}",
+                result.runtime_dir,
+                result.dlls,
+                result.downloaded_bytes,
+            )
+            self._notify_user(
+                ui_text(ui_language, "CUDA 运行库已安装", "CUDA Runtime Installed"),
+                ui_text(
+                    ui_language,
+                    f"CUDA DLL 已安装到:\n{result.runtime_dir}\n重启 VoxGo 后将启用 NVIDIA GPU 识别。",
+                    f"CUDA DLLs were installed to:\n{result.runtime_dir}\nRestart VoxGo to enable NVIDIA GPU recognition.",
+                ),
+                ui_text(ui_language, "状态", "Status"),
+            )
+        except Exception as exc:
+            logger.exception("CUDA runtime download/install failed: {}", exc)
+            self._notify_user(
+                ui_text(ui_language, "CUDA 运行库下载失败", "CUDA Runtime Download Failed"),
+                ui_text(
+                    ui_language,
+                    f"GPU 模式暂时无法启用，启动时会降级到 CPU。\n原因: {exc}",
+                    f"GPU mode cannot be enabled yet. VoxGo will fall back to CPU on startup.\nReason: {exc}",
+                ),
+                ui_text(ui_language, "错误", "Error"),
+            )
+
     def _flush_pending_notices(self):
         if not self._overlay:
             return
@@ -703,6 +840,7 @@ class VoxGoApp:
             self._speech_recognizer = SpeechRecognizer(
                 self.config.whisper,
                 self._notify_model_download_progress,
+                self._notify_recognition_device_fallback,
             )
             self._translation.initialize(self.config.translation)
             self._speech_recognizer.initialize()

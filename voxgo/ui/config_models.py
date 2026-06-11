@@ -34,9 +34,9 @@ LANGUAGE_OPTIONS = (("en", "英语"), ("zh", "中文"))
 LANGUAGE_LABELS = dict(LANGUAGE_OPTIONS)
 OPPOSITE_LANGUAGE = {"en": "zh", "zh": "en"}
 WHISPER_DEVICE_OPTIONS = (
-    ("cpu", "CPU（推荐）"),
-    ("auto", "自动检测"),
+    ("auto", "自动检测（GPU 优先）"),
     ("cuda", "NVIDIA GPU / CUDA"),
+    ("cpu", "CPU"),
 )
 WHISPER_DEVICE_LABELS = dict(WHISPER_DEVICE_OPTIONS)
 WHISPER_DOWNLOAD_SOURCE_OPTIONS = (
@@ -72,9 +72,9 @@ def _speech_language_options(ui_language: str):
 def _whisper_device_options(ui_language: str):
     if is_english_ui(ui_language):
         return (
-            ("cpu", "CPU (Recommended)"),
-            ("auto", "Auto detect"),
+            ("auto", "Auto detect (GPU first)"),
             ("cuda", "NVIDIA GPU / CUDA"),
+            ("cpu", "CPU"),
         )
     return WHISPER_DEVICE_OPTIONS
 
@@ -162,7 +162,7 @@ def _normalize_whisper_device(value: str) -> str:
         "自动检测": "auto",
     }
     value = aliases.get(value, value)
-    return value if value in WHISPER_DEVICE_LABELS else "cpu"
+    return value if value in WHISPER_DEVICE_LABELS else "auto"
 
 
 def _normalize_model_download_endpoint(value: str) -> str:
@@ -272,7 +272,7 @@ class AudioDeviceConfig:
 
 @dataclass
 class WhisperDeviceConfig:
-    device: str = "cpu"
+    device: str = "auto"
     model_size: str = "small"
     fast_model_size: str = ""
     pure_english_environment: bool = False
@@ -481,7 +481,7 @@ def _build_feedback_report(
         f"- 翻译服务：{provider_label}",
         f"- 模型名：{getattr(translation_config, 'model', '')}",
         f"- 兼容地址：{getattr(translation_config, 'endpoint', '')}",
-        f"- 识别设备：{WHISPER_DEVICE_LABELS.get(_normalize_whisper_device(getattr(whisper_config, 'device', 'cpu')), 'CPU')}",
+        f"- 识别设备：{WHISPER_DEVICE_LABELS.get(_normalize_whisper_device(getattr(whisper_config, 'device', 'auto')), '自动检测（GPU 优先）')}",
         f"- 调试模式：{'开启' if getattr(debug_config, 'enabled', False) else '关闭'}",
         "",
         "### 最近一次延迟",

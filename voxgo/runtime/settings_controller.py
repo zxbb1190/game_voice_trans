@@ -192,6 +192,11 @@ class OverlaySettingsController:
             app.config.translation.endpoint,
         )
         current_whisper_device = normalize_whisper_device(app.config.whisper.device)
+        if current_whisper_device != previous_whisper_device and current_whisper_device == "cuda":
+            if not app._prepare_cuda_runtime_for_gpu_selection(current_ui_language):
+                current_whisper_device = normalize_whisper_device(previous_whisper_device or "auto")
+                app.config.whisper.device = current_whisper_device
+                app._save_user_settings()
         current_model_download_source = (
             normalize_model_download_source(
                 getattr(app.config.whisper, "model_download_source", "modelscope"),

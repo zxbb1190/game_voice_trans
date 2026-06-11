@@ -34,8 +34,12 @@ class UpdateInfo:
     release_url: str = ""
     download_lite_url: str = ""
     download_full_url: str = ""
+    download_full_cuda_url: str = ""
+    cuda_runtime_url: str = ""
     sha256_lite: str = ""
     sha256_full: str = ""
+    sha256_full_cuda: str = ""
+    sha256_cuda_runtime: str = ""
     mandatory: bool = False
     raw: dict = field(default_factory=dict)
 
@@ -115,8 +119,12 @@ def parse_update_manifest(data: dict) -> UpdateInfo:
         release_url=str(data.get("release_url") or "").strip(),
         download_lite_url=str(data.get("download_lite_url") or "").strip(),
         download_full_url=str(data.get("download_full_url") or "").strip(),
+        download_full_cuda_url=str(data.get("download_full_cuda_url") or "").strip(),
+        cuda_runtime_url=str(data.get("cuda_runtime_url") or "").strip(),
         sha256_lite=str(data.get("sha256_lite") or "").strip(),
         sha256_full=str(data.get("sha256_full") or "").strip(),
+        sha256_full_cuda=str(data.get("sha256_full_cuda") or "").strip(),
+        sha256_cuda_runtime=str(data.get("sha256_cuda_runtime") or "").strip(),
         mandatory=bool(data.get("mandatory", False)),
         raw=dict(data),
     )

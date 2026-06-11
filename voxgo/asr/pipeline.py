@@ -812,9 +812,14 @@ class SpeechPipeline:
                 trace.whisper_model_size = str(recognizer._effective_model_size() or trace.whisper_model_size)
         except Exception:
             pass
-        trace.whisper_device = str(getattr(config, "device", trace.whisper_device) or trace.whisper_device)
+        trace.whisper_device = str(
+            getattr(recognizer, "runtime_device", "") or getattr(config, "device", trace.whisper_device)
+            or trace.whisper_device
+        )
         trace.whisper_compute_type = str(
-            getattr(config, "compute_type", trace.whisper_compute_type) or trace.whisper_compute_type
+            getattr(recognizer, "runtime_compute_type", "")
+            or getattr(config, "compute_type", trace.whisper_compute_type)
+            or trace.whisper_compute_type
         )
         if hasattr(recognizer, "_resolved_cpu_threads"):
             try:
